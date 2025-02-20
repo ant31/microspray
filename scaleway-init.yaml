@@ -1,0 +1,15 @@
+---
+# Disable password root ssh
+# Change passwords
+# Add ssh keys
+# add users
+
+- name: install hosts
+  hosts: scaleway
+  strategy: free
+  roles:
+    - role: scaleway-config/ssh-auth
+      tags: ssh-auth
+    - role: scaleway-config/config
+    - role: scaleway-config/apt
+    - role: scaleway-config/ferm-firewall

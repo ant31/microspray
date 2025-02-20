@@ -1,0 +1,9 @@
+[Resolve]
+#DNS={{ coredns_server | list | unique | join(' ') }}
+DNS={{ (coredns_server + upstream_dns_servers|d([]) + nameservers|d([]) + cloud_resolver|d([])) | unique | join(' ') }}
+Domains={{ (([ 'default.svc.' + dns_domain, 'svc.' + dns_domain ] + searchdomains|default([]))) | unique | join(' ') }}
+#LLMNR=no
+#MulticastDNS=no
+DNSSEC=no
+Cache=no-negative
+#DNSStubListener=yes

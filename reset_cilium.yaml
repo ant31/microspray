@@ -1,0 +1,48 @@
+- hosts: k8s_cluster
+  strategy: free
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  tasks:
+    - name: reset | check and remove devices if still present
+      command: "ip link del {{ item }}"
+      with_items:
+        - cilium_host
+        - cilium_net
+        - cilium_vxlan
+        - bond0
+      ignore_errors: true
+      when: reset_cilium is defined and reset_cilium|bool == true
+      tags:
+        - reset-iface
+
+    - name: Enable net.ipv4.conf.all.arp_notify in sysctl
+      sysctl:
+        name: 'net.ipv4.conf.lxc*.rp_filter'
+        value: 0
+        sysctl_set: yes
+        sysctl_file: /etc/sysctl.d/99-override_cilium_rp_filter.conf
+        state: absent
+        reload: no
+    - name: Enable net.ipv4.conf.all.arp_notify in sysctl
+      sysctl:
+        name: 'net.ipv4.conf.all.rp_filter'
+        value: 1
+        sysctl_set: yes
+        sysctl_file: /etc/sysctl.d/99-hetzner.conf
+        state: present
+        reload: no
+    - name: Enable net.ipv4.conf.all.arp_notify in sysctl
+      sysctl:
+        name: net.ipv4.conf.all.rp_filter
+        value: 0
+        sysctl_set: yes
+        sysctl_file: /etc/sysctl.d/99-override_cilium_rp_filter.conf
+        state: present
+        reload: no
+    - name: Enable net.ipv4.conf.default.rp_filter = 0
+      sysctl:
+        name: net.ipv4.conf.default.rp_filter
+        value: 0
+        sysctl_set: yes
+        sysctl_file: /etc/sysctl.d/99-override_cilium_rp_filter.conf
+        state: present
+        reload: yes

@@ -1,0 +1,12 @@
+---
+
+# Install the etcd cluster
+- hosts: etcd
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - name: Manage etcd cluster
+      import_role:
+        name: etcd3/cluster
+      tags:
+        - etcd

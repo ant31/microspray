@@ -1,0 +1,37 @@
+# Can be coredns, coredns_dual, manual, or none
+dns_mode: coredns
+
+# Enable nodelocal dns cache
+enable_nodelocaldns: true
+nodelocaldns_ip: 169.254.25.10
+nodelocaldns_health_port: 9254
+
+# Can be docker_dns, host_resolvconf or none
+resolvconf_mode: host_resolvconf
+# Should be set to a cluster IP if using a custom cluster DNS
+manual_dns_server: ""
+
+
+# Choose network plugin (cilium, calico))
+kube_network_plugin: cilium
+
+# Depending oon the network_plugin those values are not configured here
+# Kubernetes internal network for services, unused block of space.
+kube_service_addresses: 10.2.0.0/16
+# internal network. When used, it will assign IP
+# addresses from this range to individual pods.
+# This network must be unused in your network infrastructure!
+kube_pods_subnet: 10.4.0.0/14
+kubelet_max_pods: 300
+kube_network_node_prefix: 23
+
+# Configure Dual Stack networking (i.e. both IPv4 and IPv6)
+enable_dual_stack_networks: false
+
+
+# DNS configuration.
+# Kubernetes cluster name, also will be used as DNS domain
+cluster_name: cluster.local
+upstream_dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8

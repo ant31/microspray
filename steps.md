@@ -1,0 +1,5 @@
+- download new kubeadm version to all nodes
+- upgrade first master with apply
+- upgrade other master with upgrade node
+- download new kubelet
+- restart kubelet

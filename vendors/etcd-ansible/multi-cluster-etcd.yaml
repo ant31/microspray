@@ -1,0 +1,35 @@
+---
+
+# Install the etcd cluster
+- hosts: etcd
+  strategy: linear
+  any_errors_fatal: true
+  vars:
+    etcd_cluster_name: k8s
+    etcd_ports:
+      client: 2379
+      peer: 2380
+  tasks:
+    - name: Manage etcd cluster
+      import_role:
+        name: etcd3/cluster
+      tags:
+        - etcd
+
+# Install second etcd cluster
+- hosts: etcd-events
+  strategy: linear
+  any_errors_fatal: true
+  vars:
+    etcd_cluster_group: etcd-events
+    etcd_cluster_name: k8s-events
+    etcd_ports:
+      client: 2388
+      peer: 2389
+  tasks:
+    - name: Manage etcd cluster
+      import_role:
+        name: etcd3/cluster
+      tags:
+        - etcd
+        - etcd-event

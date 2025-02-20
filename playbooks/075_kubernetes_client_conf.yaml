@@ -1,0 +1,11 @@
+---
+
+- hosts: kube_control_plane[0]
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  roles:
+    - role: kubernetes/client
+      tags: client
+      vars:
+        kubeconfig_localhost: true

@@ -1,0 +1,17 @@
+---
+- name: Check ansible version
+  import_playbook: playbooks/001_ansible_version.yaml
+
+- name: Gather facts
+  tags: always
+  import_playbook: playbooks/005_facts.yaml
+# - import_playbook: playbooks/010_bastion.yaml
+# - import_playbook: playbooks/020_initialize-hosts.yaml
+- import_playbook: playbooks/050_etcd.yaml
+  vars:
+    etcd_force_create: true
+    etcd_action: 'delete'
+# - import_playbook: playbooks/055_etcd_certs.yaml
+# - import_playbook: playbooks/060_kubernetes_preinstall.yaml
+# - import_playbook: playbooks/070_kubernetes_controlplane.yaml
+# - import_playbook: playbooks/080_kubernetes_workers.yaml

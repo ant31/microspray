@@ -1,0 +1,63 @@
+---
+- name: Kubernetes Apps | Wait for kube-apiserver
+  uri:
+    url: "{{ kube_apiserver_endpoint }}/healthz"
+    validate_certs: no
+    client_cert: "{{ kube_apiserver_client_cert }}"
+    client_key: "{{ kube_apiserver_client_key }}"
+  register: result
+  until: result.status == 200
+  retries: 10
+  delay: 6
+  when: inventory_hostname == groups['kube_control_plane'][0]
+  tags:
+    - taints
+
+- name: Set inventory node taint to empty list
+  set_fact:
+    micros_inventory_node_taints: []
+  tags:
+    - taints
+
+- name: Populate inventory node taint
+  set_fact:
+    micros_inventory_node_taints: "{{ micros_inventory_node_taints + [ '%s=%s'|format(item.key, item.value) ] }}"
+  loop: "{{ node_apply_taints|d({})|dict2items }}"
+  when:
+    - node_apply_taints is defined
+    - node_apply_taints is mapping
+  tags:
+    - taints
+
+- name: Populate inventory  node  remove_taint
+  set_fact:
+    inventory_node_remove_taints: "{{ [ '%s=%s'|format(item.key, item.value) ] }}"
+  loop: "{{ node_remove_taints|d({})|dict2items }}"
+  when:
+    - node_remove_taints is defined
+    - node_remove_taints is mapping
+  tags:
+    - taints
+
+- debug:  # noqa unnamed-task
+    var: micros_inventory_node_taints
+  tags:
+    - taints
+
+- name: remove taint to node
+  command: >-
+      {{ bin_dir }}/kubectl taint node {{ kube_override_hostname | default(inventory_hostname) }} {{ item }}-
+  loop: "{{ inventory_node_remove_taints|d([]) }}"
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false
+  tags:
+    - taints
+
+- name: Set taint to node
+  command: >-
+      {{ kubectl }} taint node {{ kube_override_hostname | default(inventory_hostname) }} {{ item }} --overwrite=true
+  loop: "{{ micros_inventory_node_taints }}"
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false
+  tags:
+    - taints

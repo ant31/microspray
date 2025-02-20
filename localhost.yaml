@@ -1,0 +1,8 @@
+---
+
+- name: install hosts
+  hosts: localhost
+  connection: local
+  roles:
+    - role: kubernetes/client-tools
+      tags: client-tools

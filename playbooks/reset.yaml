@@ -1,0 +1,6 @@
+---
+- hosts: "{{ node }}"
+  strategy: free
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  roles:
+    - { role: reset }

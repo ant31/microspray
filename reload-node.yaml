@@ -1,0 +1,16 @@
+- name: Check ansible version
+  import_playbook: playbooks/001_ansible_version.yaml
+
+- hosts: k8s_cluster
+  gather_facts: True
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  tasks:
+    - name: Kubelet | reload kubelet
+      service:
+        name: containerd
+        state: restarted
+
+    - name: Kubelet | reload kubelet
+      service:
+        name: kubelet
+        state: restarted

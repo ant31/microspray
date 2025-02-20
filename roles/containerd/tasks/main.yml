@@ -1,0 +1,58 @@
+---
+
+- name: Copy containerd config file
+  template:
+    src: config.toml.j2
+    dest: "{{ containerd_cfg_dir }}/config.toml"
+    owner: "root"
+    mode: 0640
+  notify: restart containerd
+
+# # this is required to ensure any apt upgrade will not break kubernetes
+# - name: Set containerd pin priority to apt_preferences on Debian family
+#   copy:
+#     content: |
+#       Package: {{ containerd_package }}
+#       Pin: version {{ containerd_version }}*
+#       Pin-Priority: 1001
+#     dest: "/etc/apt/preferences.d/containerd"
+#     owner: "root"
+#     mode: 0644
+#   when: ansible_pkg_mgr == 'apt'
+# - name: debug
+#   debug: msg="{{ containerd_package_info.pkgs }}"
+
+# - name: ensure containerd packages are installed
+#   package:
+#     name: "{{ containerd_package_info.pkgs }}"
+#     state: present
+#   module_defaults:
+#     apt:
+#       update_cache: true
+#     dnf:
+#       enablerepo: "{{ containerd_package_info.enablerepo | default(omit) }}"
+#     yum:
+#       enablerepo: "{{ containerd_package_info.enablerepo | default(omit) }}"
+#     zypper:
+#       update_cache: true
+#   register: containerd_task_result
+#   until: containerd_task_result is succeeded
+#   retries: 1
+#   delay: "{{ retry_stagger | d(1) }}"
+#   notify: restart containerd
+#   when:
+#     - containerd_package_info.pkgs|length > 0
+
+# - include_role:
+#     name: container-engine/crictl
+
+# you can sometimes end up in a state where everything is installed
+# but containerd was not started / enabled
+- name: flush handlers
+  meta: flush_handlers
+
+- name: ensure containerd is started and enabled
+  service:
+    name: containerd
+    enabled: yes
+    state: started

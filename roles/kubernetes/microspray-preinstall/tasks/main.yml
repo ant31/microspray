@@ -1,0 +1,54 @@
+---
+- name: pick kubelet cluster IP or default resolver
+  set_fact:
+    kubelet_cluster_dns: |-
+      {%- if enable_nodelocaldns -%}
+        {{ [nodelocaldns_ip] }}
+      {%- elif dns_mode in ['coredns'] -%}
+        {{ [skydns_server] }}
+      {%- elif dns_mode == 'coredns_dual' -%}
+        {{[skydns_server,skydns_server_secondary] }}
+      {%- elif dns_mode == 'manual' -%}
+        {{ [manual_dns_server] }}
+      {%- else -%}
+        {{ [] }}
+      {%- endif -%}
+  tags:
+    - facts
+    - resolvconf
+
+- import_tasks: 0060-resolvconf.yml
+  when:
+    - dns_mode != 'none'
+    - resolvconf_mode == 'host_resolvconf'
+    - resolvconf_kubelet |  d('') | length > 0
+  vars:
+    resolvfile: "{{ resolvconf_kubelet }}"
+    namesrvs: "{{ ['nameserver ' + kubelet_cluster_dns[0]] }}"
+    searchentries: "{{['search default.svc.cluster.local svc.cluster.local']}}"
+  tags:
+    - bootstrap-os
+    - resolvconf
+
+- import_tasks: 0061-systemd-resolved.yml
+  when:
+    - dns_mode != 'none'
+    - resolvconf_mode == 'host_resolvconf'
+    - systemd_resolved_enabled.rc == 0
+  tags:
+    - bootstrap-os
+    - resolvconf
+
+- import_tasks: 0062-networkmanager.yml
+  when:
+    - dns_mode != 'none'
+    - resolvconf_mode == 'host_resolvconf'
+    - is_fedora_coreos
+  tags:
+    - bootstrap-os
+    - resolvconf
+
+- import_tasks: 0070-etcd-certs.yaml
+  tags:
+    - bootstrap-os
+    - etcd-facts

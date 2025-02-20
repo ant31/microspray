@@ -1,0 +1,15 @@
+- hosts: k8s_cluster
+  gather_facts: true
+  strategy: free
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  roles:
+    - { role: kubespray-defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - role: kubernetes/microspray-preinstall
+      when: "dns_mode != 'none' and resolvconf_mode == 'host_resolvconf'"
+      tags:
+        - resolvconf
+      dns_late: true
+      vars:
+        dns_late: true
+    - role: kubernetes/node

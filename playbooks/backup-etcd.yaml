@@ -1,0 +1,10 @@
+- hosts: etcd[0]
+  gather_facts: true
+  strategy: linear
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  roles:
+    - role: etcd3/cluster
+      tags: etcd3-backups
+  vars:
+    etcd_action: backup
+    etcd_cluster_name: k8s

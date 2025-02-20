@@ -1,0 +1,7 @@
+
+- hosts: kube_control_plane
+  gather_facts: True
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  tasks:
+    - name: Kubelet | renew certificates
+      command: /opt/bin/k8s-certs-renew.sh

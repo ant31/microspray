@@ -1,0 +1,11 @@
+---
+
+# install the etcd client certificates to all hosts using etcd
+- hosts: etcd-clients
+  strategy: linear
+  tasks:
+    - name: Create client certificates
+      import_role:
+        name: etcd3/certs
+      tags:
+        - etcd-certs

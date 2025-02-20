@@ -1,0 +1,40 @@
+---
+- debug:
+    msg: "{{resolvfile}} - {{ resolvconf_kubelet}}"
+
+- name: Add domain/search/nameservers/options to resolv.conf
+  blockinfile:
+    path: "{{ resolvfile }}"
+    block: |-
+      {% for item in searchentries|d([]) + namesrvs -%}
+      {{ item }}
+      {% endfor %}
+      options ndots:{{ ndots }} timeout:2 attempts:2 edns
+    state: present
+    insertbefore: BOF
+    create: yes
+    backup: yes
+    marker: "# Ansible entries {mark}"
+    mode: 0644
+  notify: Preinstall | propagate resolvconf to k8s components
+
+- name: Remove search/domain/nameserver options before block
+  replace:
+    dest: "{{ item[0] }}"
+    regexp: '^{{ item[1] }}[^#]*(?=# Ansible entries BEGIN)'
+    backup: yes
+  with_nested:
+    - "{{ [resolvconffile, base|default(''), head|default('')] | difference(['']) }}"
+    - [ 'search ', 'nameserver ', 'domain ', 'options ' ]
+  notify: Preinstall | propagate resolvconf to k8s components
+
+- name: Remove search/domain/nameserver options after block
+  replace:
+    dest: "{{ item[0] }}"
+    regexp: '(# Ansible entries END\n(?:(?!^{{ item[1] }}).*\n)*)(?:^{{ item[1] }}.*\n?)+'
+    replace: '\1'
+    backup: yes
+  with_nested:
+    - "{{ [resolvconffile, base|default(''), head|default('')] | difference(['']) }}"
+    - [ 'search ', 'nameserver ', 'domain ', 'options ' ]
+  notify: Preinstall | propagate resolvconf to k8s components

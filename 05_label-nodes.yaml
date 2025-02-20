@@ -1,0 +1,16 @@
+# ANSIBLE_HASH_BEHAVIOUR=merge ansible-playbook -i inventory/hetzner-a  05_label-nodes.yaml -u root
+
+- name: Check ansible version
+  import_playbook: playbooks/001_ansible_version.yaml
+
+- hosts: k8s_cluster
+  gather_facts: True
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  tasks:
+    - debug: msg="{{node_labels}}"
+  roles:
+    - { role: kubespray-defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - { role: kubernetes/node-label, tags: node-label }
+    - { role: kubernetes/remove-node-label, tags: node-label }
+    - { role: kubernetes/node-taint, tags: taint-label }

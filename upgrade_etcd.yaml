@@ -1,0 +1,139 @@
+---
+- name: Check ansible version
+  import_playbook: playbooks/001_ansible_version.yaml
+
+- hosts: etcd[0]
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - import_role:
+        name: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s
+      tags:
+         - etcd
+         - etcd-facts
+
+- hosts: etcd[0]
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - import_role:
+        name: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s-events
+      tags:
+         - etcd
+         - etcd-facts
+
+- hosts: etcd[0]
+  tasks:
+    - name: debug
+      debug:
+        msg: "{{etcd_peer_addresses_semicolon_k8s_events}}"
+      tags:
+        - etcd-facts
+
+- hosts: etcd
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - import_role:
+        name: etcd3/cluster
+      vars:
+          etcd_cluster_name: k8s
+          etcd_rotate_certs: false
+          etcd_sync_certs: false
+          etcd_skip_certs: true
+          etcd_force_create: false
+          # etcd_force_create: true # uncomment if first install failed
+          etcd_action: 'upgrade' # #create, deploy or uprade #  set to 'create' to initiate a new cluster
+          etcd_ports:
+            client: 2379
+            peer: 2380
+      tags:
+        - etcd
+
+- hosts: etcd
+  strategy: free
+  ignore_errors: true
+  tasks:
+    - import_role:
+        name: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s
+      tags:
+        etcd-restart
+    - name: restart etcd
+      systemd:
+        name: "{{etcd_members[ansible_hostname].etcd_name}}"
+        state: restarted
+        enabled: yes
+        daemon-reload: yes
+      when:
+        - etcd_restart|d(false) | bool
+      tags:
+        etcd-restart
+
+
+# install the etcd client certificates to all hosts using etcd
+- hosts: etcd-clients
+  strategy: linear
+  tasks:
+    - import_role:
+        name: etcd3/certs
+      vars:
+        etcd_cluster_name: k8s
+      tags:
+        - etcd-certs
+
+# EVENTS
+- hosts: etcd-events
+  strategy: linear
+  gather_facts: true
+  any_errors_fatal: true
+  tasks:
+    - name: delete
+      file:
+        path: /var/lib/etcd/etcd-k8s-events-{{etcd_members[ansible_hostname].etcd_member_index}}
+        state: absent
+      vars:
+        etcd_cluster_name: k8s-events
+      tags:
+        - delete-etcd-events
+    - import_role:
+        name: etcd3/cluster
+      vars:
+          etcd_cluster_name: k8s-events
+          etcd_rotate_certs: false
+          etcd_sync_certs: false
+          etcd_skip_certs: true  # use the same certificate than the main cluster
+          etcd_force_create: false  # uncomment if first install failed
+          etcd_action: 'upgrade'  # set to 'create' to initiate a new cluster
+          # etcd_sync_certs: true
+          etcd_ports:
+            client: 2381
+            peer: 2382
+      tags:
+        - etcd-events
+
+- hosts: etcd
+  strategy: free
+  ignore_errors: true
+  tasks:
+    - import_role:
+        name: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s-events
+      tags:
+        etcd-restart
+    - name: restart etcd
+      systemd:
+        name: "{{etcd_members[ansible_hostname].etcd_name}}"
+        state: restarted
+        enabled: yes
+        daemon-reload: yes
+      when:
+        - etcd_restart|d(false) | bool
+      tags:
+        - etcd-events-restart

@@ -1,0 +1,21 @@
+---
+- name: Kubernetes Apps | Wait for kube-apiserver
+  uri:
+    url: "{{ kube_apiserver_endpoint }}/healthz"
+    validate_certs: no
+    client_cert: "{{ kube_apiserver_client_cert }}"
+    client_key: "{{ kube_apiserver_client_key }}"
+  register: result
+  until: result.status == 200
+  retries: 10
+  delay: 6
+  when: inventory_hostname == groups['kube_control_plane'][0]
+
+- name: remove label to node
+  command: >-
+      {{ bin_dir }}/kubectl label node {{ kube_override_hostname | default(inventory_hostname) }} {{ item }}-
+  loop: "{{ node_remove_labels|d([]) }}"
+  delegate_to: "{{ groups['kube_control_plane'][0] }}"
+  changed_when: false
+  tags:
+    - remove-labels

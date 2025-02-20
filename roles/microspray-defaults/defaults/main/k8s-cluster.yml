@@ -1,0 +1,25 @@
+---
+
+## Change this to use another Kubernetes version, e.g. a current beta release
+kube_version: v1.26.0
+
+# Cluster Loglevel configuration
+kube_log_level: 2
+
+## Encrypting Secret Data at Rest (experimental)
+kube_encrypt_secret_data: false
+
+# K8s image pull policy (imagePullPolicy)
+k8s_image_pull_policy: IfNotPresent
+
+# audit log for kubernetes
+kubernetes_audit: false
+
+# pod security policy (RBAC must be enabled either by having 'RBAC' in authorization_modes or kubeadm enabled)
+podsecuritypolicy_enabled: false
+
+## Amount of time to retain events. (default 1h0m0s)
+event_ttl_duration: "1h0m0s"
+
+##  Force regeneration of kubernetes control plane certificates without the need of bumping the cluster version
+force_certificate_regeneration: false

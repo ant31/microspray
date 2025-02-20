@@ -1,0 +1,36 @@
+---
+- hosts: localhost
+  strategy: linear
+  vars:
+    ansible_connection: local
+    versions:
+      etcd_ansible: master
+      kubespray: master
+    vendor_dest: .
+    vendor_dependencies:
+      kubespray:
+        dest: "kubespray.git"
+        git:
+          source: https://github.com/kubernetes-sigs/kubespray.git
+          version: "{{versions.kubespray}}"
+        synchronize:
+          src: kubespray.git/
+          dest: kubespray
+          keep: false
+      etcd3:
+        dest: "etcd-ansible.git"
+        git:
+          source: https://github.com/ant31/etcd-ansible.git
+          version: "{{versions.etcd_ansible}}"
+        # file:
+        #   url: "https://github.com/ant31/etcd-ansible/archive/{{versions.etcd_ansible}}.zip"
+        #   archive_dest:  "/tmp/etcd-ansible-{{versions.etcd_ansible}}.zip"
+        #   unarchive: true
+        #   keep_archive: no
+        synchronize:
+          src: etcd-ansible.git/
+          dest: etcd-ansible
+          keep: false
+
+  roles:
+    - name: vendor

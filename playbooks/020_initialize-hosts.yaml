@@ -1,0 +1,25 @@
+---
+- hosts: cluster-all
+  gather_facts: false
+  strategy: free
+  tasks:
+    # 1. Install required packages to run ansible on hosts
+    - import_role:
+        name: bootstrap-os
+      vars:
+        ansible_ssh_pipelining: false
+      tags:
+        - prepare-hosts
+        - init-hosts
+
+- hosts: container-hosts
+  strategy: free
+  roles:
+    - { role: kubespray-defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - role: container-engine
+      vars:
+        ansible_ssh_pipelining: true
+      tags:
+        - container-engine
+        - init-hosts

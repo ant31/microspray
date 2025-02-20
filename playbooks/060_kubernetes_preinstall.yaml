@@ -1,0 +1,11 @@
+---
+- hosts: k8s_cluster
+  strategy: free
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  roles:
+    - { role: etcd3/facts, tags: preinstall, facts}
+    - { role: kubespray-defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - { role: kubernetes/microspray-preinstall, tags: preinstall}
+    - { role: kubernetes/download, tags: preinstall}
+    - { role: kubernetes/node, tags: node }

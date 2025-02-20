@@ -1,0 +1,135 @@
+---
+
+- name: kubeadm | aggregate all SANs
+  set_fact:
+    apiserver_sans: "{{ (sans_base + groups['kube_control_plane'] + sans_lb + sans_lb_ip + sans_supp + sans_access_ip + sans_ip + sans_address + sans_override + sans_hostname + sans_fqdn + sans_ip_vlan) | unique }}"
+  vars:
+    sans_base:
+      - "kubernetes"
+      - "kubernetes.default"
+      - "kubernetes.default.svc"
+      - "kubernetes.default.svc.{{ dns_domain }}"
+      - "{{ kube_apiserver_ip }}"
+      - "{{ ip }}"
+      - "{{ ip_vlan | d(ip) }}"
+      - "localhost"
+      - "127.0.0.1"
+    sans_lb: "{{ [apiserver_loadbalancer_domain_name] if apiserver_loadbalancer_domain_name is defined else [] }}"
+    sans_lb_ip: "{{ [loadbalancer_apiserver.address] if loadbalancer_apiserver is defined and loadbalancer_apiserver.address is defined else [] }}"
+    sans_ip_vlan: "{{ groups['kube_control_plane'] | map('extract', hostvars, 'ip_vlan') | list | select('defined') | list }}"
+    sans_supp: "{{ supplementary_addresses_in_ssl_keys if supplementary_addresses_in_ssl_keys is defined else [] }}"
+    sans_access_ip: "{{ groups['kube_control_plane'] | map('extract', hostvars, 'access_ip') | list | select('defined') | list }}"
+    sans_ip: "{{ groups['kube_control_plane'] | map('extract', hostvars, 'ip') | list | select('defined') | list }}"
+    sans_address: "{{ groups['kube_control_plane'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | list | select('defined') | list }}"
+    sans_override: "{{ [kube_override_hostname] if kube_override_hostname else [] }}"
+    sans_hostname: "{{ groups['kube_control_plane'] | map('extract', hostvars, ['ansible_hostname']) | list | select('defined') | list }}"
+    sans_fqdn: "{{ groups['kube_control_plane'] | map('extract', hostvars, ['ansible_fqdn']) | list | select('defined') | list }}"
+  tags: facts
+
+- name: debug_sans
+  debug: msg="{{apiserver_sans}}"
+
+- name: debug_sans
+  debug: msg="{{ groups['kube_control_plane'] | map('extract', hostvars, 'ip_vlan') | list | select('defined') | list }}"
+
+- name: generate current_configuration
+  shell: kubectl get cm/kubeadm-config -o yaml -n kube-system  > {{kube_config_dir}}/current-kubeadm.yaml
+  ignore_errors: true
+  when:
+    - inventory_hostname in groups['kube_control_plane']
+
+- name: download current configuration
+  fetch:
+    src: /etc/kubernetes/current-kubeadm.yaml
+    dest: "{{artifacts_dir}}/current-kubeadm-{{ ansible_date_time.iso8601 }}.yaml"
+  when:
+    - inventory_hostname in groups['kube_control_plane']
+
+- name: kubeadm | Create kubeadm config
+  template:
+    src: "kubeadm-config.v1beta4.yaml.j2"
+    dest: "{{ kube_config_dir }}/kubeadm-config.yaml"
+    mode: 0640
+  when:
+    - inventory_hostname in groups['kube_control_plane']
+
+# - name: review diff
+#   command: kubeadm upgrade diff --config {{kube_config_dir}}/kubeadm-config.yaml
+#   register: diff
+#   when:
+#     - inventory_hostname in groups['kube_control_plane']|first
+
+# - name: show diff
+#   debug:
+#     msg: "{{diff.stdout  | to_yaml}}"
+#   when:
+#     - inventory_hostname in groups['kube_control_plane']|first
+# # - name: Confirm upgrade
+# #   pause:
+# #     prompt: "Are you sure you want to upgrade the dataplane? (yes/no)"
+# #   register: confirm
+# #   when:
+# #     - inventory_hostname  == groups['kube_control_plane']|first
+
+# - name: Apply configuration - First
+#   command: kubeadm upgrade apply -y {{kube_version}} --ignore-preflight-errors=all --force --v=5
+#   when:
+#     - inventory_hostname  in groups['kube_control_plane']
+#   notify: Control plane | restart kubelet
+#   retries: 3
+#   register: kubeadm_upgrade
+#   until: kubeadm_upgrade.rc == 0
+#   failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
+
+#     #  - confirm.user_input | bool
+
+# # The recommended way to do upgrade is running:
+# # kubeadm upgrade node
+# # But this command is using the shared config:  kubectl -n kube-system get cm kubeadm-config
+# # This config doesn't have node specific etcd certificate
+# # Instead we'll run kubeadm upgrade apply on all master nodes
+# - name: Apply configuration on other nodes
+#   command: kubeadm upgrade node --ignore-preflight-errors=all --v=5
+#   when:
+#     - inventory_hostname not in groups['kube_control_plane']
+#     #- confirm.user_input | bool
+#   notify: Control plane | restart kubelet
+#   retries: 3
+#   register: kubeadm_upgrade
+#   until: kubeadm_upgrade.rc == 0
+#   failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
+
+- name: debug first_control node
+  debug:
+    msg: "first node: {{first_kube_control_plane}} {{inventory_hostname}}"
+
+- name: Kubeadm | Upgrade first control plane node
+  command: >-
+    timeout -k 600s 600s
+    {{ bin_dir }}/kubeadm
+    upgrade apply -y {{ kube_version }}
+    --ignore-preflight-errors={{ kubeadm_ignore_preflight_errors | join(',') }}
+  register: kubeadm_upgrade
+  # Retry is because upload config sometimes fails
+  retries: 3
+  until: kubeadm_upgrade.rc == 0
+  when: inventory_hostname == first_kube_control_plane
+  failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
+  environment:
+    PATH: "{{ bin_dir }}:{{ ansible_env.PATH }}"
+  notify: Control plane | restart kubelet
+
+- name: Kubeadm | Upgrade other control plane nodes
+  command: >-
+    timeout -k 600s 600s
+    {{ bin_dir }}/kubeadm
+    upgrade node
+    --ignore-preflight-errors={{ kubeadm_ignore_preflight_errors | join(',') }}
+  register: kubeadm_upgrade
+  # Retry is because upload config sometimes fails
+  retries: 3
+  until: kubeadm_upgrade.rc == 0
+  when: inventory_hostname != first_kube_control_plane
+  failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
+  environment:
+    PATH: "{{ bin_dir }}:{{ ansible_env.PATH }}"

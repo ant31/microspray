@@ -1,0 +1,12 @@
+# change to 0.0.0.0 to enable insecure access from anywhere (not recommended)
+kube_apiserver_insecure_bind_address: 127.0.0.1
+
+# advertised host IP for kubelet. This affects network plugin config. Take caution
+kubelet_address: "{{  ip_vlan | d(ip | default(fallback_ips[inventory_hostname])) }}{{ (',' + ip6) if enable_dual_stack_networks and ip6 is defined else '' }}"
+
+# bind address for kubelet. Set to 0.0.0.0 to listen on all interfaces
+kubelet_bind_address: "{{ ip_vlan | d(ip | default('0.0.0.0')) }}"
+kubelet_logfiles_max_size: 100Mi
+
+resolvconf_kubelet: "{{kube_config_dir}}/pod-resolv.conf"
+kube_resolv_conf: "{{resolvconf_kubelet}}"

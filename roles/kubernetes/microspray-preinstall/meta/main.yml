@@ -1,0 +1,10 @@
+---
+
+dependencies:
+  - role: kubernetes/kubeadm_common
+    tags:
+      - preinstall
+
+  - role: kubernetes/preinstall
+    tags:
+      - preinstall

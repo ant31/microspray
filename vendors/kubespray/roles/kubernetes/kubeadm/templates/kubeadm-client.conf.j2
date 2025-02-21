@@ -32,7 +32,7 @@ caCertPath: {{ kube_cert_dir }}/ca.crt
 {% if kubeadm_cert_controlplane is defined and kubeadm_cert_controlplane %}
 controlPlane:
   localAPIEndpoint:
-    advertiseAddress: {{ kube_apiserver_address }}
+    advertiseAddress: "{{ kube_apiserver_address }}"
     bindPort: {{ kube_apiserver_port }}
   certificateKey: {{ kubeadm_certificate_key }}
 {% endif %}

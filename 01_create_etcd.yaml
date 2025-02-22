@@ -2,7 +2,7 @@
 - name: Check ansible version
   import_playbook: playbooks/001_ansible_version.yaml
 
-- hosts: etcd[0]
+- hosts: etcd
   strategy: linear
   any_errors_fatal: true
   tasks:
@@ -14,7 +14,7 @@
          - etcd
          - etcd-facts
 
-- hosts: etcd[0]
+- hosts: etcd
   strategy: linear
   any_errors_fatal: true
   tasks:
@@ -104,7 +104,7 @@
       vars:
           etcd_cluster_name: k8s-events
           etcd_skip_certs: true  # use the same certificate than the main cluster
-          etcd_force_create: true  # uncomment if first install failed
+#          etcd_force_create: true  # uncomment if first install failed
           etcd_action: 'create'  # set to 'create' to initiate a new cluster
           # etcd_sync_certs: true
           etcd_ports:
@@ -122,7 +122,8 @@
       vars:
         etcd_cluster_name: k8s-events
       tags:
-        etcd-restart
+        - etcd-restart
+
     - name: restart etcd
       systemd:
         name: "{{etcd_members[ansible_hostname].etcd_name}}"

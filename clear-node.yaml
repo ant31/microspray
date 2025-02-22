@@ -115,16 +115,20 @@
           ignore_errors: true  # noqa ignore-errors
           changed_when: true
 
-    - name: reset | unmount kubelet dirs  # noqa 301
-      command: umount -f {{ item }}
-      with_items: "{{ mounted_dirs.stdout_lines }}"
-      register: umount_dir
-      when: mounted_dirs
-      retries: 4
-      until: umount_dir.rc == 0
-      delay: 5
-      tags:
-        - mounts
+    - name: debug
+      debug:
+        msg: "{{mounted_dirs}}"
+
+    # # - name: reset | unmount kubelet dirs  # noqa 301
+    # #   command: umount -f {{ item }}
+    # #   with_items: "{{ mounted_dirs.stdout_lines }}"
+    # #   register: umount_dir
+    # #   when: mounted_dirs
+    # #   retries: 4
+    # #   until: umount_dir.rc == 0
+    # #   delay: 5
+    # #   tags:
+    # #     - mounts
 
     - name: reset | Check whether /var/lib/kubelet directory exists
       stat:
@@ -160,8 +164,10 @@
         path: "{{ item }}"
         state: absent
       with_items:
-          - "{{ kube_config_dir }}"
+          - "{{ kube_config_dir }}/manifests/nginx.yaml"
           - /var/lib/kubelet
+          - /data/var/lib/kubelet
+          - /data/var/lib/containerd
           - /run/kubernetes
           - /usr/local/share/ca-certificates/kube-ca.crt
           - /etc/ssl/certs/kube-ca.pem

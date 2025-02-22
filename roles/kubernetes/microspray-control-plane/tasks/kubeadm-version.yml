@@ -14,3 +14,5 @@
     dest: "{{ kube_config_dir }}/kubeadm-config.yaml"
     mode: 0640
     backup: true
+  tags:
+    - tpl

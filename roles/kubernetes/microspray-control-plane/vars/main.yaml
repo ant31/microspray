@@ -1,3 +1,6 @@
 ---
 # list of admission plugins that needs to be configured
 kube_apiserver_admission_plugins_needs_configuration: [EventRateLimit, PodSecurity]
+etcd_events_access_addresses_semicolon: "{{etcd_access_addresses_semicolon_k8s_events}}"
+etcd_access_addresses: "{{etcd_access_addresses_k8s}}"
+kubeadmConfig_api_version: v1beta4

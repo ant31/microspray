@@ -51,4 +51,3 @@
 - import_tasks: 0070-etcd-certs.yaml
   tags:
     - bootstrap-os
-    - etcd-facts

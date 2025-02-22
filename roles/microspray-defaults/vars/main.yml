@@ -1,1 +1,10 @@
 kube_resolv_conf: "{{resolvconf_kubelet}}"
+# Real path: {{etcd_cert_paths.client.ca}}"
+kube_etcd_cacert_file: "kube-client-ca.pem"
+# Real path: {{etcd_cert_paths.client.cert}}"
+kube_etcd_cert_file: "kube-client-cert.pem"
+# "{{etcd_cert_paths.client.key}}"
+kube_etcd_key_file: "kube-client-key.pem"
+
+
+is_kube_control_plane: "{{ inventory_hostname in groups['kube_control_plane'] }}"

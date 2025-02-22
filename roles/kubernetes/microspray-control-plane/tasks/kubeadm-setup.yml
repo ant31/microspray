@@ -19,7 +19,7 @@
 
 - name: kubeadm | Check if kubeadm has already run
   stat:
-    path: "/var/lib/kubelet/config.yaml"
+    path: "{{kubelet_root_dir|d('/var/lib/kubelet')}}/config.yaml"
     get_attributes: no
     get_checksum: no
     get_mime: no

@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: kubernetes/kubeadm_common
+    tags:
+      - facts

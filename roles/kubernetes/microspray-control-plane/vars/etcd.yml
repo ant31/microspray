@@ -1,3 +1,0 @@
----
-etcd_events_access_addresses_semicolon: "{{etcd_access_addresses_semicolon_k8s_events}}"
-etcd_access_addresses: "{{etcd_access_addresses_k8s}}"

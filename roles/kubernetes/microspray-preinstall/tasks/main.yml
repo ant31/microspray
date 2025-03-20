@@ -51,3 +51,10 @@
 - import_tasks: 0070-etcd-certs.yaml
   tags:
     - bootstrap-os
+
+- import_tasks: 0080_kubeletroot.yaml
+  tags:
+    - bootstrap-os
+    - kubelet-root
+  when:
+    - kubelet_root_dir != '/var/lib/kubelet'

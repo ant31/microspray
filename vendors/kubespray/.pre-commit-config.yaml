@@ -29,7 +29,7 @@ repos:
         files: "\\.sh$"
 
   - repo: https://github.com/ansible/ansible-lint
-    rev: v25.1.0
+    rev: v25.1.1
     hooks:
       - id: ansible-lint
         additional_dependencies:
@@ -69,6 +69,14 @@ repos:
           - jinja2
           - pathlib
           - pyaml
+
+      - id: check-galaxy-version
+        name: Verify correct version for galaxy.yml
+        entry: scripts/galaxy_version.py
+        language: python
+        pass_filenames: false
+        additional_dependencies:
+          - ruamel.yaml
 
       - id: jinja-syntax-check
         name: jinja-syntax-check

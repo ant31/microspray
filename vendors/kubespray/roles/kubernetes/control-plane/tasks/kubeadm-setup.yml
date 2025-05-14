@@ -53,21 +53,21 @@
     path: "{{ audit_policy_file | dirname }}"
     state: directory
     mode: "0640"
-  when: kubernetes_audit | default(false) or kubernetes_audit_webhook | default(false)
+  when: kubernetes_audit or kubernetes_audit_webhook
 
 - name: Write api audit policy yaml
   template:
     src: apiserver-audit-policy.yaml.j2
     dest: "{{ audit_policy_file }}"
     mode: "0640"
-  when: kubernetes_audit | default(false) or kubernetes_audit_webhook | default(false)
+  when: kubernetes_audit or kubernetes_audit_webhook
 
 - name: Write api audit webhook config yaml
   template:
     src: apiserver-audit-webhook-config.yaml.j2
     dest: "{{ audit_webhook_config_file }}"
     mode: "0640"
-  when: kubernetes_audit_webhook | default(false)
+  when: kubernetes_audit_webhook
 
 - name: Create apiserver tracing config directory
   file:
@@ -94,7 +94,7 @@
     src: "kubeadm-config.{{ kubeadm_config_api_version }}.yaml.j2"
     dest: "{{ kube_config_dir }}/kubeadm-config.yaml"
     mode: "0640"
-    validate: "{{ bin_dir }}/kubeadm config validate --config %s"
+    validate: "{{ kubeadm_config_validate_enabled | ternary(bin_dir + '/kubeadm config validate --config %s', omit) }}"
 
 - name: Kubeadm | Create directory to store admission control configurations
   file:
@@ -229,7 +229,7 @@
 - name: Kubeadm | Join other control plane nodes
   include_tasks: kubeadm-secondary.yml
 
-- name: Kubeadm | upgrade kubernetes cluster
+- name: Kubeadm | upgrade kubernetes cluster to {{ kube_version }}
   include_tasks: kubeadm-upgrade.yml
   when:
     - upgrade_cluster_setup

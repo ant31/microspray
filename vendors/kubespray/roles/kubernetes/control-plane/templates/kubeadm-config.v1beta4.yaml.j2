@@ -29,6 +29,8 @@ nodeRegistration:
   - name: cloud-provider
     value: external
 {% endif %}
+  imagePullPolicy: {{ k8s_image_pull_policy }}
+  imagePullSerial: {{ kubeadm_image_pull_serial | lower }}
 {% if kubeadm_patches | length > 0 %}
 patches:
   directory: {{ kubeadm_patches_dir }}
@@ -102,6 +104,9 @@ etcd:
 {% endfor %}
 {% endif %}
 dns:
+{% if 'addon/coredns' in kubeadm_init_phases_skip  %}
+  disabled: true
+{% endif %}
   imageRepository: {{ coredns_image_repo | regex_replace('/coredns(?!/coredns).*$', '') }}
   imageTag: {{ coredns_image_tag }}
 networking:
@@ -116,7 +121,7 @@ featureGates:
   {{ feature | replace("=", ": ") }}
 {%   endfor %}
 {% endif %}
-kubernetesVersion: {{ kube_version }}
+kubernetesVersion: v{{ kube_version }}
 {% if kubeadm_config_api_fqdn is defined %}
 controlPlaneEndpoint: "{{ kubeadm_config_api_fqdn }}:{{ loadbalancer_apiserver.port | default(kube_apiserver_port) }}"
 {% else %}
@@ -144,7 +149,7 @@ apiServer:
 {% endif %}
 {% if kube_apiserver_use_authorization_config_file %}
   - name: authorization-config
-    value: "{{ kube_config_dir }}/apiserver-authorization-config.yaml"
+    value: "{{ kube_config_dir }}/apiserver-authorization-config-{{ kube_apiserver_authorization_config_api_version }}.yaml"
 {% else %}
   - name: authorization-mode
     value: "{{ authorization_modes | join(',') }}"
@@ -306,8 +311,8 @@ apiServer:
 {% endif %}
 {% if kube_apiserver_use_authorization_config_file %}
   - name: authorization-config
-    hostPath: {{ kube_config_dir }}/apiserver-authorization-config.yaml
-    mountPath: {{ kube_config_dir }}/apiserver-authorization-config.yaml
+    hostPath: {{ kube_config_dir }}/apiserver-authorization-config-{{ kube_apiserver_authorization_config_api_version }}.yaml
+    mountPath: {{ kube_config_dir }}/apiserver-authorization-config-{{ kube_apiserver_authorization_config_api_version }}.yaml
 {% endif %}
 {% if kubernetes_audit or kubernetes_audit_webhook %}
   - name: {{ audit_policy_name }}
@@ -476,6 +481,42 @@ scheduler:
     readOnly: {{ volume.readOnly | d(not (volume.writable | d(false))) }}
 {% endfor %}
 {% endif %}
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: UpgradeConfiguration
+apply:
+  kubernetesVersion: v{{ kube_version }}
+  allowExperimentalUpgrades: true
+  certificateRenewal: {{ kubeadm_upgrade_auto_cert_renewal | lower }}
+  etcdUpgrade: {{ (etcd_deployment_type == "kubeadm") | lower }}
+  forceUpgrade: true
+{% if kubeadm_ignore_preflight_errors | length > 0 %}
+  ignorePreflightErrors:
+{% for ignore_error in kubeadm_ignore_preflight_errors %}
+  - "{{ ignore_error }}"
+{% endfor %}
+{% endif %}
+{% if kubeadm_patches | length > 0 %}
+  patches:
+    directory: {{ kubeadm_patches_dir }}
+{% endif %}
+  imagePullPolicy: {{ k8s_image_pull_policy }}
+  imagePullSerial: {{ kubeadm_image_pull_serial | lower }}
+node:
+  certificateRenewal: {{ kubeadm_upgrade_auto_cert_renewal | lower }}
+  etcdUpgrade: {{ (etcd_deployment_type == "kubeadm") | lower }}
+{% if kubeadm_ignore_preflight_errors | length > 0 %}
+  ignorePreflightErrors:
+{% for ignore_error in kubeadm_ignore_preflight_errors %}
+  - "{{ ignore_error }}"
+{% endfor %}
+{% endif %}
+{% if kubeadm_patches | length > 0 %}
+  patches:
+    directory: {{ kubeadm_patches_dir }}
+{% endif %}
+  imagePullPolicy: {{ k8s_image_pull_policy }}
+  imagePullSerial: {{ kubeadm_image_pull_serial | lower }}
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration

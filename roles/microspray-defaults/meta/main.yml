@@ -1,5 +1,5 @@
 ---
 dependencies:
-  - role: kubespray-defaults
+  - role: kubespray_defaults
     tags:
       - facts

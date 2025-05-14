@@ -5,7 +5,7 @@
   tasks:
     # 1. Install required packages to run ansible on hosts
     - import_role:
-        name: bootstrap-os
+        name: bootstrap_os
       vars:
         ansible_ssh_pipelining: false
       tags:
@@ -15,7 +15,7 @@
 - hosts: container-hosts
   strategy: free
   roles:
-    - { role: kubespray-defaults, tags: facts}
+    - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - role: container-engine
       vars:

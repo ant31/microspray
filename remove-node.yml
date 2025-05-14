@@ -16,5 +16,5 @@
 - hosts: "{{ node }}"
   gather_facts: no
   roles:
-    - { role: kubespray-defaults, when: reset_nodes|default(True)|bool }
+    - { role: kubespray_defaults, when: reset_nodes|default(True)|bool }
     - { role: reset, tags: reset, when: reset_nodes|default(True)|bool }

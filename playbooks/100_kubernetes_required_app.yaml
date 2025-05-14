@@ -3,7 +3,7 @@
   strategy: linear
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   roles:
-    - { role: kubespray-defaults, tags: facts}
+    - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - { role: kubernetes-apps, tags: [apps] }
 #    - { role: kubernetes-apps/network_plugin, tags: network }

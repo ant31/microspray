@@ -24,7 +24,7 @@
          - etcd
          - etcd-facts
          - facts
-    - { role: kubespray-defaults, tags: facts}
+    - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - { role: kubernetes/node, tags: node }
     - { role: kubernetes/microspray-control-plane, tags: master }

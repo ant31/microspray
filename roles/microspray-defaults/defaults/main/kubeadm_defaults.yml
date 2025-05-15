@@ -14,3 +14,4 @@ kubeadm_patches_dir: "{{ kube_config_dir }}/patches"
 kubeadm_patches: []
 kubeadm_ignore_preflight_errors:
   - []
+bin_dir: /usr/local/bin

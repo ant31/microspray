@@ -5,6 +5,7 @@
   strategy: linear
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   roles:
+    - { role: network_facts, tags: facts}
     - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - role: kubernetes/client

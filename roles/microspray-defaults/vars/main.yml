@@ -8,3 +8,20 @@ kube_etcd_key_file: "kube-client-key.pem"
 
 
 is_kube_control_plane: "{{ inventory_hostname in groups['kube_control_plane'] }}"
+kubelet_rotate_server_certificates: true
+
+
+discovery_timeout: 60s
+kubeadm_join_timeout: 120s
+
+# If non-empty, will use this string as identification instead of the actual hostname
+kube_override_hostname: >-
+  {%- if cloud_provider is defined and cloud_provider in [ 'aws' ] -%}
+  {%- else -%}
+  {{ inventory_hostname }}
+  {%- endif -%}
+kubeadm_patches_dir: "{{ kube_config_dir }}/patches"
+kubeadm_patches: []
+kubeadm_ignore_preflight_errors:
+  - []
+bin_dir: /usr/local/bin

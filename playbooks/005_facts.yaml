@@ -34,6 +34,10 @@
   gather_facts: False
   tags: always
   tasks:
+    - name: Gather and compute network facts
+      import_role:
+        name: network_facts
+
     - name: Gather minimal facts
       setup:
         gather_subset: '!all'

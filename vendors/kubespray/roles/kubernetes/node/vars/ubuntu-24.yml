@@ -1,2 +1,2 @@
 ---
-kube_resolv_conf: "{{kube_config_dir}}/pod-resolv.conf"
+kube_resolv_conf: "/run/systemd/resolve/resolv.conf"

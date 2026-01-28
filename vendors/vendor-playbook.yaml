@@ -4,7 +4,7 @@
   vars:
     ansible_connection: local
     versions:
-      etcd_ansible: master
+      etcd_ansible: main
       kubespray: master
     vendor_dest: .
     vendor_dependencies:

@@ -18,15 +18,13 @@
   delegate_to: "{{ groups['kube_control_plane'][0] }}"
   run_once: true
   loop: "{{ coredns_manifests | flatten }}"
-
   tags:
     - coredns
   vars:
     clusterIP: "{{ skydns_server }}"
   when:
     - dns_mode in ['coredns', 'coredns_dual']
-    - deploy_coredns | d(true)
-
+    - deploy_coredns
 
 - name: Kubernetes Apps | CoreDNS Secondary
   command:
@@ -42,7 +40,7 @@
     coredns_ordinal_suffix: "-secondary"
   when:
     - dns_mode == 'coredns_dual'
-    - deploy_coredns | d(true)
+    - deploy_coredns
 
 - name: Kubernetes Apps | nodelocalDNS
   command:
@@ -97,7 +95,7 @@
   delegate_to: "{{ groups['kube_control_plane'][0] }}"
   run_once: true
   vars:
-    namespace: "{{ netcheck_namespace }}"
+    k8s_namespace: "{{ netcheck_namespace }}"
   when: deploy_netchecker
   tags:
     - netchecker
@@ -119,7 +117,7 @@
   delegate_to: "{{ groups['kube_control_plane'][0] }}"
   run_once: true
   vars:
-    namespace: "{{ dashboard_namespace }}"
+    k8s_namespace: "{{ dashboard_namespace }}"
   when: dashboard_enabled
   tags:
     - dashboard

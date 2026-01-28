@@ -1,0 +1,35 @@
+---
+- name: Check ansible version
+  import_playbook: playbooks/001_ansible_version.yaml
+
+- hosts: etcd[3]
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - import_role:
+        name: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s        
+    - import_role:
+        name: etcd3/backups
+      vars:
+        etcd_cluster_name: k8s
+      tags:
+         - etcd
+         - etcd-facts
+
+- hosts: etcd[0]
+  strategy: linear
+  any_errors_fatal: true
+  tasks:
+    - import_role:
+        name: etcd3/facts        
+    - import_role:
+        name: etcd3/backups
+      vars:
+        etcd_cluster_name: k8s-events
+      tags:
+         - etcd
+         - etcd-facts
+      when:
+        - backup_etcd_events|d(false) | bool

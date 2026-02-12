@@ -362,7 +362,7 @@ def check_recent_backup(config: dict) -> bool:
         result = run_command([
             config['bin_dir'] / 'aws', 's3api', 'list-objects-v2',
             '--bucket', config['s3_bucket'],
-            '--prefix', f"{config['s3_prefix']}{config['cluster_name']}/",
+            '--prefix', f"{config['s3_prefix']}",
             '--query', f"Contents[?LastModified>=`{cutoff_datetime}`].{{Key:Key,Modified:LastModified}}",
             '--output', 'text'
         ], check=False)
@@ -570,9 +570,9 @@ def create_snapshot(config: dict, cluster_online: bool, dry_run: bool = False) -
     final_checksum = calculate_sha256(final_file)
     logger.info(f"Final file checksum: {final_checksum}")
     
-    # Upload to S3 - include cluster name in path
-    # Format: s3_prefix/cluster_name/YYYY/MM/filename
-    s3_path = f"{config['s3_prefix']}{config['cluster_name']}/{year}/{month}/{snapshot_file.name}{s3_suffix}"
+    # Upload to S3
+    # Format: s3_prefix/YYYY/MM/filename (s3_prefix already includes cluster name)
+    s3_path = f"{config['s3_prefix']}{year}/{month}/{snapshot_file.name}{s3_suffix}"
     logger.info(f"Uploading backup to S3: s3://{config['s3_bucket']}/{s3_path}")
     
     try:
@@ -634,10 +634,10 @@ def create_snapshot(config: dict, cluster_online: bool, dry_run: bool = False) -
     
     logger.info("✓ Upload verification PASSED")
     
-    # Update latest pointer - include cluster name in path
+    # Update latest pointer
     logger.info("Updating 'latest' pointer...")
-    latest_path = f"{config['s3_prefix']}{config['cluster_name']}/latest-snapshot.db{s3_suffix}"
-    latest_sha256_path = f"{config['s3_prefix']}{config['cluster_name']}/latest-snapshot.db.sha256"
+    latest_path = f"{config['s3_prefix']}latest-snapshot.db{s3_suffix}"
+    latest_sha256_path = f"{config['s3_prefix']}latest-snapshot.db.sha256"
     
     try:
         run_command([
@@ -714,27 +714,55 @@ def create_snapshot(config: dict, cluster_online: bool, dry_run: bool = False) -
 
 
 def cleanup_old_backups(config: dict) -> None:
-    """Remove local backups older than retention period"""
-    retention_days = config['retention_days']
-    logger.info(f"Cleaning up local backups older than {retention_days} days...")
+    """
+    Remove local backups older than retention period (local disk only, not S3)
     
-    cutoff_time = time.time() - (retention_days * 86400)
-    deleted_count = 0
+    This function is designed to NEVER fail the backup operation.
+    All errors are caught and logged as warnings.
+    """
+    if not config.get('cleanup_enabled', True):
+        logger.info("Cleanup disabled by configuration, skipping")
+        return
     
-    for backup_file in config['backup_dir'].rglob('*.db'):
-        if backup_file.stat().st_mtime < cutoff_time:
-            logger.info(f"Deleting old backup: {backup_file}")
-            backup_file.unlink()
-            deleted_count += 1
+    local_retention_days = config['local_retention_days']
+    logger.info(f"Cleaning up local backups older than {local_retention_days} days...")
     
-    logger.info(f"Deleted {deleted_count} old backup(s)")
-    
-    # Remove empty directories
-    for dirpath in config['backup_dir'].rglob('*'):
-        if dirpath.is_dir() and not any(dirpath.iterdir()):
-            dirpath.rmdir()
-    
-    logger.info("✓ Local cleanup completed")
+    try:
+        cutoff_time = time.time() - (local_retention_days * 86400)
+        deleted_count = 0
+        error_count = 0
+        
+        for backup_file in config['backup_dir'].rglob('*.db'):
+            try:
+                if backup_file.stat().st_mtime < cutoff_time:
+                    logger.info(f"Deleting old backup: {backup_file}")
+                    backup_file.unlink()
+                    deleted_count += 1
+            except Exception as e:
+                error_count += 1
+                logger.warning(f"Failed to delete {backup_file} (non-fatal): {e}")
+        
+        logger.info(f"Deleted {deleted_count} old backup(s)")
+        if error_count > 0:
+            logger.warning(f"Failed to delete {error_count} file(s) (non-fatal)")
+        
+        # Remove empty directories
+        try:
+            for dirpath in config['backup_dir'].rglob('*'):
+                if dirpath.is_dir() and not any(dirpath.iterdir()):
+                    try:
+                        dirpath.rmdir()
+                    except Exception as e:
+                        logger.warning(f"Failed to remove empty directory {dirpath} (non-fatal): {e}")
+        except Exception as e:
+            logger.warning(f"Directory cleanup failed (non-fatal): {e}")
+        
+        logger.info("✓ Local cleanup completed")
+        
+    except Exception as e:
+        logger.warning(f"Backup cleanup failed (non-fatal): {e}")
+        logger.warning("Backup was successful, but old file cleanup failed")
+        logger.warning("You may need to manually clean old backups")
 
 
 def send_healthcheck_ping(config: dict, status: str = 'success') -> None:
@@ -743,13 +771,13 @@ def send_healthcheck_ping(config: dict, status: str = 'success') -> None:
         return
     
     url = f"{config['healthcheck_url']}?status={status}"
-    logger.info("Sending healthcheck ping...")
+    logger.info(f"Sending healthcheck ping with status: {status.upper()}")
     
     try:
         run_command(['curl', '-fsS', '--retry', '3', url], check=False, capture_output=True)
-        logger.info("✓ Healthcheck ping successful")
+        logger.info(f"✓ Healthcheck ping sent: {status.upper()}")
     except Exception as e:
-        logger.warning(f"Healthcheck ping failed (non-fatal): {e}")
+        logger.warning(f"Healthcheck ping FAILED to send (non-fatal): {e}")
 
 
 def decrypt_file(config: dict, input_file: str, output_file: str, encryption_method: str, 
@@ -1008,7 +1036,7 @@ def main():
         'kms_key_id': config_dict.get('kms_key_id', ''),
         'backup_password': config_dict.get('backup_password', ''),
         'cluster_name': config_dict['cluster_name'],
-        'retention_days': config_dict['retention_days'],
+        'local_retention_days': config_dict['local_retention_days'],
         'healthcheck_url': config_dict.get('healthcheck_url', ''),
         'backup_interval_minutes': config_dict['backup_interval_minutes'],
         'distributed_backup': config_dict.get('distributed_backup', True),
@@ -1106,10 +1134,6 @@ def main():
         logger.error(f"Etcd Backup FAILED: {e}")
         logger.error("=" * 72)
         sys.stdout.flush()
-        
-        if not args.dry_run:
-            send_healthcheck_ping(config, 'failure')
-        
         return 1
     
     except Exception as e:
@@ -1126,10 +1150,6 @@ def main():
         
         logger.error("=" * 72)
         sys.stdout.flush()
-        
-        if not args.dry_run:
-            send_healthcheck_ping(config, 'failure')
-        
         return 1
 
 

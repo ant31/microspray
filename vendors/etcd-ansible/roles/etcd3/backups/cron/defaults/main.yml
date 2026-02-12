@@ -49,13 +49,22 @@ etcd_backup_initial_run: true
 ca_backup_initial_run: true
 
 # Deadman monitoring (optional)
+# Can be set manually OR populated automatically by healthchecks role
 backup_healthcheck_enabled: false
-backup_healthcheck_url: ""  # e.g., https://hc-ping.com/your-uuid or https://deadmanssnitch.com/your-snitch
-ca_backup_healthcheck_url: ""
+backup_healthcheck_url: ""  # Set by healthchecks role or manually (e.g., https://hc-ping.com/your-uuid)
+ca_backup_healthcheck_url: ""  # Set by healthchecks role or manually
 
-# Backup retention
-etcd_backup_retention_days: 90
-ca_backup_retention_days: 365
+# Local backup retention (controls local disk cleanup only, not S3)
+# S3 retention must be configured separately via S3 lifecycle policies
+# See: docs/operations/backup-restore.md for S3 lifecycle policy setup
+etcd_backup_local_retention_days: 90
+ca_backup_local_retention_days: 365
+
+# Automatic cleanup of old local backups
+# Set to false to disable automatic cleanup (manual cleanup required)
+# Default: true (cleanup runs after successful backup)
+etcd_backup_cleanup_enabled: true
+ca_backup_cleanup_enabled: true
 
 # Restore checksum verification
 # If true, verify SHA256 checksum of decrypted backups during restore

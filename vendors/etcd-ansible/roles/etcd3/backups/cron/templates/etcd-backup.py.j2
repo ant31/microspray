@@ -33,13 +33,13 @@ from typing import Optional, Tuple
 
 # Configuration from Ansible template
 CONFIG = {
-    'backup_dir': Path('{{ etcd_cluster_backup.directory }}'),
-    'etcd_endpoints': '{{ etcd_access_addresses }}',
-    'cert': Path('{{ etcd_cert_paths.client.cert }}'),
-    'key': Path('{{ etcd_cert_paths.client.key }}'),
-    'cacert': Path('{{ etcd_cert_paths.client.ca }}'),
-    's3_bucket': '{{ etcd_upload_backup.bucket }}',
-    's3_prefix': '{{ etcd_upload_backup.prefix | default("") }}',
+    'backup_dir': Path('{{ etcd_cluster_backup_directory }}'),
+    'etcd_endpoints': '{{ etcd_clusters[etcd_cluster_name].etcd_access_addresses }}',
+    'cert': Path('{{ etcd_clusters[etcd_cluster_name].etcd_cert_paths.client.cert }}'),
+    'key': Path('{{ etcd_clusters[etcd_cluster_name].etcd_cert_paths.client.key }}'),
+    'cacert': Path('{{ etcd_clusters[etcd_cluster_name].etcd_cert_paths.client.ca }}'),
+    's3_bucket': '{{ etcd_backup_s3_bucket }}',
+    's3_prefix': '{{ etcd_backup_s3_prefix }}',
     'encryption_method': '{{ step_ca_backup_encryption_method }}',
     'kms_key_id': '{{ step_ca_backup_kms_key_id }}',
     'backup_password': '{{ step_ca_backup_password }}',
@@ -311,7 +311,7 @@ def check_recent_backup() -> bool:
         result = run_command([
             CONFIG['bin_dir'] / 'aws', 's3api', 'list-objects-v2',
             '--bucket', CONFIG['s3_bucket'],
-            '--prefix', f"{CONFIG['s3_prefix']}{CONFIG['cluster_name']}/",
+            '--prefix', f"{CONFIG['s3_prefix']}",
             '--query', f"Contents[?LastModified>=`{cutoff_datetime}`].{{Key:Key,Modified:LastModified}}",
             '--output', 'text'
         ], check=False)
@@ -446,7 +446,8 @@ def create_snapshot(dry_run: bool = False) -> Optional[Tuple[Path, str]]:
     logger.info(f"Final file checksum: {final_checksum}")
     
     # Upload to S3
-    s3_path = f"{CONFIG['s3_prefix']}{CONFIG['cluster_name']}/{year}/{month}/{snapshot_file.name}{s3_suffix}"
+    # Format: s3_prefix/YYYY/MM/filename (s3_prefix already includes cluster name)
+    s3_path = f"{CONFIG['s3_prefix']}{year}/{month}/{snapshot_file.name}{s3_suffix}"
     logger.info(f"Uploading backup to S3: s3://{CONFIG['s3_bucket']}/{s3_path}")
     
     try:
@@ -486,7 +487,7 @@ def create_snapshot(dry_run: bool = False) -> Optional[Tuple[Path, str]]:
     
     # Update latest pointer
     logger.info("Updating 'latest' pointer...")
-    latest_path = f"{CONFIG['s3_prefix']}{CONFIG['cluster_name']}/latest-snapshot.db{s3_suffix}"
+    latest_path = f"{CONFIG['s3_prefix']}latest-snapshot.db{s3_suffix}"
     try:
         run_command([
             CONFIG['bin_dir'] / 'aws', 's3', 'cp',
@@ -546,33 +547,59 @@ def create_snapshot(dry_run: bool = False) -> Optional[Tuple[Path, str]]:
 
 
 {% raw %}
-def cleanup_old_backups() -> None:
-{% endraw %}
-    """Remove local backups older than retention period"""
-    retention_days = CONFIG['retention_days']
-    logger.info(f"Cleaning up local backups older than {retention_days} days...")
+def cleanup_old_backups(config: dict) -> None:
+    """
+    Remove local backups older than retention period
     
-    cutoff_time = time.time() - (retention_days * 86400)
-    deleted_count = 0
+    This function is designed to NEVER fail the backup operation.
+    All errors are caught and logged as warnings.
+    """
+    if not config.get('cleanup_enabled', True):
+        logger.info("Cleanup disabled by configuration, skipping")
+        return
     
-    for backup_file in CONFIG['backup_dir'].rglob('*.db'):
-        if backup_file.stat().st_mtime < cutoff_time:
-            logger.info(f"Deleting old backup: {backup_file}")
-            backup_file.unlink()
-            deleted_count += 1
+    local_retention_days = config['local_retention_days']
+    logger.info(f"Cleaning up local backups older than {local_retention_days} days...")
     
-    logger.info(f"Deleted {deleted_count} old backup(s)")
-    
-    # Remove empty directories
-    for dirpath in CONFIG['backup_dir'].rglob('*'):
-        if dirpath.is_dir() and not any(dirpath.iterdir()):
-            dirpath.rmdir()
-    
-    logger.info("✓ Local cleanup completed")
+    try:
+        cutoff_time = time.time() - (local_retention_days * 86400)
+        deleted_count = 0
+        error_count = 0
+        
+        for backup_file in config['backup_dir'].rglob('*.db'):
+            try:
+                if backup_file.stat().st_mtime < cutoff_time:
+                    logger.info(f"Deleting old backup: {backup_file}")
+                    backup_file.unlink()
+                    deleted_count += 1
+            except Exception as e:
+                error_count += 1
+                logger.warning(f"Failed to delete {backup_file} (non-fatal): {e}")
+        
+        logger.info(f"Deleted {deleted_count} old backup(s)")
+        if error_count > 0:
+            logger.warning(f"Failed to delete {error_count} file(s) (non-fatal)")
+        
+        # Remove empty directories
+        try:
+            for dirpath in config['backup_dir'].rglob('*'):
+                if dirpath.is_dir() and not any(dirpath.iterdir()):
+                    try:
+                        dirpath.rmdir()
+                    except Exception as e:
+                        logger.warning(f"Failed to remove empty directory {dirpath} (non-fatal): {e}")
+        except Exception as e:
+            logger.warning(f"Directory cleanup failed (non-fatal): {e}")
+        
+        logger.info("✓ Local cleanup completed")
+        
+    except Exception as e:
+        logger.warning(f"Backup cleanup failed (non-fatal): {e}")
+        logger.warning("Backup was successful, but old file cleanup failed")
+        logger.warning("You may need to manually clean old backups")
 
 
-{% raw %}
-def send_healthcheck_ping(status: str = 'success') -> None:
+def send_healthcheck_ping(config: dict, status: str = 'success') -> None:
 {% endraw %}
     """Send healthcheck ping if configured"""
     if not CONFIG['healthcheck_url']:
@@ -664,10 +691,10 @@ def main():
         
         if result and not args.dry_run:
             # Cleanup old backups
-            cleanup_old_backups()
+            cleanup_old_backups(config)
             
             # Send healthcheck ping
-            send_healthcheck_ping('success')
+            send_healthcheck_ping(config, 'success')
         
         logger.info("=" * 72)
         logger.info("Etcd Backup Completed Successfully")

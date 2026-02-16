@@ -36,7 +36,7 @@
       - "localhost"
       - "127.0.0.1"
       - "::1"
-      - "{{ apiserver_loadbalancer_domain_name }}"
+      - "{{ apiserver_loadbalancer_domain_name | d('') }}"
       - "{{ loadbalancer_apiserver.address | d('') }}"
       - "{{ supplementary_addresses_in_ssl_keys }}"
       - "{{ groups['kube_control_plane'] | map('extract', hostvars, 'main_access_ip') }}"
@@ -252,22 +252,7 @@
   when: temp_token.stdout is defined
   tags:
     - kubeadm_token
-    
-# kubeadm upgrade no longer reconciles ClusterConfiguration and KubeProxyConfiguration changes, this must be done separately after upgrade to ensure the latest config is applied
-- name: Update kubeadm and kubelet configmaps after upgrade
-  command: "{{ bin_dir }}/kubeadm init phase upload-config all --config {{ kube_config_dir }}/kubeadm-config.yaml"
-  register: kubeadm_upload_config
-  # Retry is because upload config sometimes fails
-  retries: 3
-  delegate_to: "{{ first_kube_control_plane }}"
-  run_once: true
-  until: kubeadm_upload_config.rc == 0
-  when:
-  - inventory_hostname == first_kube_control_plane
-- name: debug
-  debug:
-    msg: "uploaded: {{kubeadm_upload_config}}"
-    
+
 - name: Kubeadm | Join other control plane nodes
   include_tasks: kubeadm-secondary.yml
 

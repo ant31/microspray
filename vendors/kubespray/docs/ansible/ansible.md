@@ -30,9 +30,9 @@ If the latest version supported according to pip is 6.7.0 it means you are runni
 
 Based on the table below and the available python version for your ansible host you should choose the appropriate ansible version to use with kubespray.
 
-| Ansible Version | Python Version |
-|-----------------|----------------|
-| >= 2.17.3       | 3.10-3.12      |
+|  Ansible Version  | Python Version |
+|-------------------|----------------|
+| >=2.18.0, <2.19.0 | 3.11-3.13      |
 
 ## Customize Ansible vars
 
@@ -78,7 +78,6 @@ The following tags are defined in playbooks:
 | crio                           | Configuring crio container engine for hosts           |
 | crun                           | Configuring crun runtime                              |
 | csi-driver                     | Configuring csi driver                                |
-| dashboard                      | Installing and configuring the Kubernetes Dashboard   |
 | dns                            | Remove dns entries when resetting                     |
 | docker                         | Configuring docker engine runtime for hosts           |
 | download                       | Fetching container images to a delegate host          |
@@ -193,11 +192,11 @@ You will then need to use [bind mounts](https://docs.docker.com/storage/bind-mou
 to access the inventory and SSH key in the container, like this:
 
 ```ShellSession
-git checkout v2.29.0
-docker pull quay.io/kubespray/kubespray:v2.29.0
+git checkout v2.30.0
+docker pull quay.io/kubespray/kubespray:v2.30.0
 docker run --rm -it --mount type=bind,source="$(pwd)"/inventory/sample,dst=/inventory \
   --mount type=bind,source="${HOME}"/.ssh/id_rsa,dst=/root/.ssh/id_rsa \
-  quay.io/kubespray/kubespray:v2.29.0 bash
+  quay.io/kubespray/kubespray:v2.30.0 bash
 # Inside the container you may now run the kubespray playbooks:
 ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_rsa cluster.yml
 ```

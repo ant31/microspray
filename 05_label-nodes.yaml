@@ -12,5 +12,5 @@
     - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - { role: kubernetes/node-label, tags: node-label }
-    - { role: kubernetes/remove-node-label, tags: node-label }
-    - { role: kubernetes/node-taint, tags: taint-label }
+    - { role: kubernetes/microspray-remove-node-label, tags: node-label }
+    - { role: kubernetes/microspray-node-taint, tags: taint-label }

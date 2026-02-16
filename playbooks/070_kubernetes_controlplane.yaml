@@ -28,7 +28,7 @@
     - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
     - { role: kubernetes/node, tags: node }
-    - { role: kubernetes/microspray-control-plane, tags: master }
+    - { role: kubernetes/control-plane, tags: master }
     - { role: kubernetes/client, tags: client }
     - { role: kubernetes-apps/cluster_roles, tags: cluster-roles }
     # - { role: kubernetes-apps/rotate_tokens, tags: rotate_tokens, when: "secret_changed|default(false)" }

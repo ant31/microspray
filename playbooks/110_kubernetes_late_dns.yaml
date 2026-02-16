@@ -6,6 +6,20 @@
     - { role: network_facts, tags: facts}
     - { role: kubespray_defaults, tags: facts}
     - { role: microspray-defaults, tags: facts}
+    - role: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s-events
+      tags:
+         - etcd
+         - etcd-facts
+         - facts
+    - role: etcd3/facts
+      vars:
+        etcd_cluster_name: k8s
+      tags:
+         - etcd
+         - etcd-facts
+         - facts        
     - role: kubernetes/microspray-preinstall
       when: "dns_mode != 'none' and resolvconf_mode == 'host_resolvconf'"
       tags:

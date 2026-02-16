@@ -1,5 +1,5 @@
 ---
-- hosts: kube_control_plane
+- hosts: etcd_all
   strategy: linear
   any_errors_fatal: true
   tasks:
@@ -7,14 +7,11 @@
         name: etcd3/facts
       vars:
         etcd_cluster_name: k8s
-        etcd_ports:
-            client: 2379
-            peer: 2380
       tags:
          - etcd
          - etcd-facts
 
-- hosts: kube_control_plane
+- hosts: etcd_all
   strategy: linear
   any_errors_fatal: true
   tasks:
@@ -22,21 +19,21 @@
         name: etcd3/facts
       vars:
         etcd_cluster_name: k8s-events
-        etcd_ports:
-            client: 2381
-            peer: 2382
       tags:
          - etcd
          - etcd-facts
 
 - name: Gather facts
-  hosts: cluster-all:etcd:calico_rr
+  hosts: cluster-all:etcd_all:calico_rr
   gather_facts: False
   tags: always
   tasks:
     - name: Gather and compute network facts
       import_role:
         name: network_facts
+    - name: debug factts
+      debug:
+        msg: "ip: {{main_ips}}"
 
     - name: Gather minimal facts
       setup:

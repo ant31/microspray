@@ -16,7 +16,7 @@
           
           This will FORCE immediate renewal of ALL certificates on:
           - {{ groups['etcd'] | length }} etcd nodes
-          - {{ groups['etcd-clients'] | length }} client nodes
+          - {{ groups['etcd_clients'] | length }} client nodes
           
           This operation:
           - Forces renewal even if certificates are not near expiration
@@ -35,7 +35,7 @@
       when: not (force_cert_rotation | default(false))
 
 - name: Rotate all certificates (force renewal)
-  hosts: etcd,etcd-clients
+  hosts: etcd,etcd_clients
   gather_facts: yes
   roles:
     - role: etcd3/certs/operations

@@ -59,6 +59,12 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - nodes/proxy
+  verbs:
+  - get
+- apiGroups:
   - topology.node.k8s.io
   resources:
   - noderesourcetopologies

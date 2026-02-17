@@ -27,4 +27,4 @@
       dns_late: true
       vars:
         dns_late: true
-    - role: kubernetes/node
+    

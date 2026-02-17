@@ -5,5 +5,4 @@
 - name: Gather facts
   tags: always
   import_playbook: playbooks/005_facts.yaml
-- import_playbook: playbooks/060_kubernetes_preinstall.yaml
 - import_playbook: playbooks/upgrade-controlplane.yaml

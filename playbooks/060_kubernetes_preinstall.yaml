@@ -9,4 +9,4 @@
     - { role: microspray-defaults, tags: facts}
     - { role: kubernetes/microspray-preinstall, tags: preinstall}
     - { role: download, tags: download, when: "not skip_downloads" }
-    - { role: kubernetes/node, tags: node }
+

@@ -2,7 +2,7 @@
 
 - hosts: kube_node
   gather_facts: true
-  strategy: linear
+  strategy: free
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
 
   roles:
@@ -24,6 +24,7 @@
          - etcd
          - etcd-facts
          - facts    
+    - { role: kubernetes/node, tags: kubeadm }         
     - { role: kubernetes/kubeadm, tags: kubeadm }
     - { role: kubernetes/node-label, tags: node-label }
     - { role: kubernetes/microspray-node-taint, tags: node-taint }

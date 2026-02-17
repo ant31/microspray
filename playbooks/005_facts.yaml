@@ -24,7 +24,7 @@
          - etcd-facts
 
 - name: Gather facts
-  hosts: cluster-all:etcd_all:calico_rr
+  hosts: cluster-all:etcd_all:calico_rr:cluster_all
   gather_facts: False
   tags: always
   tasks:

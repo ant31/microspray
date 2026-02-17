@@ -5,53 +5,29 @@
   serial: 1
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   roles:
-    - {role: microspray-defaults, tags: facts}
-    - role: etcd3/facts
-      vars:
-        etcd_cluster_name: k8s
-        etcd_ports:
-            client: 2379
-            peer: 2380
-    - role: etcd3/facts
-      vars:
-        etcd_cluster_name: k8s-events
-        etcd_ports:
-            client: 2381
-            peer: 2382
-
-      tags: facts
-      
-    - role: kubernetes/control-plane-update
-      tags:
-        - upgrade
-        - control-plane
-        - update-control-plane
-      environment:
-        PATH: "{{ ansible_env.PATH }}:{{ bin_dir }}"
-
+    - { role: network_facts, tags: facts}
+    - { role: kubespray_defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - { role: network_facts, tags: facts}
+    - {role: etcd3/facts, vars: {etcd_cluster_name: k8s-events}, tags: facts}
+    - {role: etcd3/facts, vars: {etcd_cluster_name: k8s}, tags: facts}
+    - { role: kubernetes/microspray-preinstall, tags: preinstall}
+    - { role: download, tags: download, when: "not skip_downloads" }    
+    - { role: kubernetes/node, tags: node }
+    - { role: kubernetes/control-plane, tags: control-plane, upgrade_cluster_setup: true }         
 
 - hosts: kube_node
-  strategy: linear
-  serial: 1
+  strategy: free
+  serial: "{{ serial | int | default('2')}} "
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   roles:
-    - role: etcd3/facts
-      vars:
-        etcd_cluster_name: k8s
-        etcd_ports:
-            client: 2379
-            peer: 2380
-    - role: etcd3/facts
-      vars:
-        etcd_cluster_name: k8s-events
-        etcd_ports:
-            client: 2381
-            peer: 2382
-    - {role: microspray-defaults, tags: facts}
-    - role: kubernetes/control-plane-update
-      tags:
-        - upgrade
-        - control-plane
-        - update-control-plane
-      environment:
-        PATH: "{{ ansible_env.PATH }}:{{ bin_dir }}"
+    - { role: network_facts, tags: facts}
+    - { role: kubespray_defaults, tags: facts}
+    - { role: microspray-defaults, tags: facts}
+    - { role: network_facts, tags: facts}
+    - {role: etcd3/facts, vars: {etcd_cluster_name: k8s-events}, tags: facts}
+    - {role: etcd3/facts, vars: {etcd_cluster_name: k8s}, tags: facts}
+    - { role: kubernetes/microspray-preinstall, tags: preinstall}
+    - { role: download, tags: download, when: "not skip_downloads" }    
+    - { role: kubernetes/node, tags: node }
+    - { role: kubernetes/kubeadm, tags: kubeadm }
